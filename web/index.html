@@ -1,0 +1,2036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Prism • Android Media Hub & Streamer</title>
+  <meta name="description" content="High-performance media streaming and gallery server for Android Termux over Tailscale">
+  <meta name="theme-color" content="#09090b">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ==========================================================================
+       Design System Tokens (ui-ux-pro-max: Cinema Dark / High-End Utility)
+       ========================================================================== */
+    :root {
+      --bg-base: #09090b;
+      --bg-surface: #121216;
+      --bg-elevated: #18181d;
+      --bg-overlay: rgba(9, 9, 11, 0.94);
+      --bg-glass: rgba(18, 18, 22, 0.85);
+
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-strong: rgba(255, 255, 255, 0.16);
+      --border-focus: #6366f1;
+
+      --text-primary: #f4f4f6;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --text-dim: #52525b;
+
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --accent-soft: rgba(59, 130, 246, 0.12);
+      --accent-text: #60a5fa;
+
+      --status-active: #10b981;
+      --status-active-soft: rgba(16, 185, 129, 0.12);
+
+      --radius-sm: 6px;
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --radius-pill: 9999px;
+
+      --shadow-surface: 0 4px 12px rgba(0, 0, 0, 0.4);
+      --shadow-modal: 0 20px 40px rgba(0, 0, 0, 0.8), 0 0 0 1px var(--border-subtle);
+
+      --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+
+      --topbar-height: 56px;
+      --controlbar-height: 48px;
+      --grid-gap: 8px;
+      --grid-min-size: 190px;
+    }
+
+    /* Reset & Base Setup */
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      background-color: var(--bg-base);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      text-rendering: optimizeLegibility;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    button, input, select {
+      font-family: inherit;
+      font-size: inherit;
+      color: inherit;
+      border: none;
+      background: none;
+      outline: none;
+    }
+
+    button {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* Accessible Visible Focus */
+    :focus-visible {
+      outline: 2px solid var(--border-focus);
+      outline-offset: 2px;
+    }
+
+    /* Tabular numbers for timestamps and measurements */
+    .tnum {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: -0.01em;
+    }
+
+    /* Layout Shell */
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ==========================================================================
+       Primary Header (Utility Bar)
+       ========================================================================== */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--topbar-height);
+      background: var(--bg-glass);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      gap: 16px;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .brand-mark {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-sm);
+      background: #18181d;
+      border: 1px solid var(--border-strong);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-primary);
+    }
+
+    .brand-mark svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 2;
+    }
+
+    .brand-info {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .brand-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .brand-tag {
+      font-size: 0.65rem;
+      font-family: var(--font-mono);
+      padding: 1px 5px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      color: var(--text-secondary);
+      text-transform: uppercase;
+    }
+
+    /* Header Search */
+    .search-container {
+      flex: 1;
+      max-width: 460px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-input-wrap {
+      width: 100%;
+      height: 34px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      display: flex;
+      align-items: center;
+      padding: 0 10px;
+      gap: 8px;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .search-input-wrap:focus-within {
+      border-color: var(--border-focus);
+      background: var(--bg-elevated);
+    }
+
+    .search-input-wrap svg {
+      width: 15px;
+      height: 15px;
+      stroke: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .search-input {
+      width: 100%;
+      color: var(--text-primary);
+      font-size: 0.85rem;
+    }
+
+    .search-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .search-shortcut {
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-subtle);
+      padding: 1px 5px;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    .search-clear-btn {
+      display: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 2px;
+    }
+
+    .search-clear-btn:hover {
+      color: var(--text-primary);
+    }
+
+    /* Header Actions */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .tailscale-status-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 12px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .tailscale-status-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .status-indicator {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--status-active);
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+    }
+
+    .status-ip {
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--text-primary);
+    }
+
+    .action-icon-btn {
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .action-icon-btn:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .action-icon-btn svg {
+      width: 16px;
+      height: 16px;
+      stroke-width: 1.75;
+    }
+
+    /* ==========================================================================
+       Secondary Control Toolbar (Filters, Views, Density)
+       ========================================================================== */
+    .toolbar-bar {
+      position: sticky;
+      top: var(--topbar-height);
+      z-index: 45;
+      background: var(--bg-base);
+      border-bottom: 1px solid var(--border-subtle);
+      padding: 8px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    /* Segmented Control Tabs */
+    .segmented-control {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 3px;
+      gap: 2px;
+    }
+
+    .segmented-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      transition: all 0.15s ease;
+    }
+
+    .segmented-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2;
+    }
+
+    .segmented-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .segmented-btn.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      border: 1px solid var(--border-strong);
+    }
+
+    .counter-tag {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .segmented-btn.active .counter-tag {
+      color: var(--text-secondary);
+    }
+
+    /* Toolbar Secondary Actions */
+    .toolbar-secondary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .select-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .select-wrap svg {
+      position: absolute;
+      right: 10px;
+      width: 13px;
+      height: 13px;
+      stroke: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .custom-select {
+      height: 32px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 0 28px 0 12px;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: all 0.15s ease;
+    }
+
+    .custom-select:hover {
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .density-switcher {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 2px;
+    }
+
+    .density-btn {
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      border-radius: var(--radius-sm);
+      transition: all 0.15s ease;
+    }
+
+    .density-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .density-btn.active {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .density-btn svg {
+      width: 14px;
+      height: 14px;
+      stroke-width: 1.75;
+    }
+
+    .stats-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-left: 6px;
+      display: none;
+    }
+
+    @media (min-width: 1024px) {
+      .stats-label { display: block; }
+    }
+
+    /* ==========================================================================
+       Media Grid Canvas
+       ========================================================================== */
+    .content-canvas {
+      flex: 1;
+      padding: 16px 20px 48px;
+      width: 100%;
+      max-width: 2000px;
+      margin: 0 auto;
+    }
+
+    .media-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(var(--grid-min-size), 1fr));
+      gap: var(--grid-gap);
+    }
+
+    /* Grid Density Variations */
+    .media-grid.density-compact {
+      --grid-min-size: 140px;
+      --grid-gap: 4px;
+    }
+
+    .media-grid.density-comfortable {
+      --grid-min-size: 200px;
+      --grid-gap: 8px;
+    }
+
+    .media-grid.density-large {
+      --grid-min-size: 280px;
+      --grid-gap: 12px;
+    }
+
+    /* Media Item Card */
+    .media-card {
+      position: relative;
+      aspect-ratio: 1 / 1;
+      background: var(--bg-surface);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+      cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      transition: transform 0.18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.18s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .media-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+      border-color: var(--border-strong);
+      z-index: 2;
+    }
+
+    .media-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.2s ease;
+    }
+
+    .media-card img.loading {
+      opacity: 0;
+    }
+
+    /* Badges (Subtle, Monochrome, Professional) */
+    .card-badge-top {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(9, 9, 11, 0.75);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .card-badge-top svg {
+      width: 10px;
+      height: 10px;
+      stroke-width: 2;
+    }
+
+    .card-badge-bottom {
+      position: absolute;
+      bottom: 6px;
+      right: 6px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: rgba(9, 9, 11, 0.75);
+      backdrop-filter: blur(6px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
+      font-family: var(--font-mono);
+      font-size: 0.65rem;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    /* Video Play Center Emblem */
+    .play-emblem {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(18, 18, 22, 0.75);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      transition: transform 0.15s ease, background 0.15s ease;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .media-card:hover .play-emblem {
+      transform: scale(1.1);
+      background: rgba(59, 130, 246, 0.9);
+      border-color: transparent;
+    }
+
+    .play-emblem svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+      margin-left: 2px;
+    }
+
+    /* Audio Item Placeholder Card */
+    .audio-card-inner {
+      width: 100%;
+      height: 100%;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #18181d 0%, #121216 100%);
+      text-align: center;
+      gap: 8px;
+    }
+
+    .audio-card-inner svg {
+      width: 32px;
+      height: 32px;
+      stroke: var(--text-muted);
+      stroke-width: 1.5;
+    }
+
+    .audio-card-name {
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Skeleton Placeholder */
+    .skeleton-card {
+      background: linear-gradient(90deg, #121216 25%, #1c1c24 50%, #121216 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.6s infinite;
+      border-radius: var(--radius-sm);
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Empty / Zero State */
+    .empty-state {
+      padding: 96px 20px;
+      text-align: center;
+      max-width: 400px;
+      margin: 0 auto;
+      display: none;
+    }
+
+    .empty-icon {
+      width: 44px;
+      height: 44px;
+      margin: 0 auto 16px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+    }
+
+    .empty-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+    }
+
+    .empty-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    /* Infinite Scroll Load Trigger */
+    .load-more-bar {
+      margin-top: 32px;
+      text-align: center;
+      display: flex;
+      justify-content: center;
+    }
+
+    .btn-secondary {
+      height: 36px;
+      padding: 0 18px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.15s ease;
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    /* ==========================================================================
+       Fullscreen Cinema Lightbox & Inspector
+       ========================================================================== */
+    .lightbox-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: var(--bg-overlay);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      display: none;
+      flex-direction: column;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .lightbox-overlay.active {
+      display: flex;
+      opacity: 1;
+    }
+
+    /* Lightbox Top Control HUD */
+    .lightbox-hud-top {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--topbar-height);
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(180deg, rgba(9, 9, 11, 0.85) 0%, transparent 100%);
+      z-index: 30;
+      transition: opacity 0.3s ease;
+    }
+
+    .hud-title-group {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      overflow: hidden;
+      max-width: 50%;
+    }
+
+    .hud-filename {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .hud-counter {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .hud-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Lightbox Main Stage */
+    .lightbox-stage {
+      flex: 1;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      padding: 60px 80px 70px;
+    }
+
+    @media (max-width: 768px) {
+      .lightbox-stage {
+        padding: 50px 10px 60px;
+      }
+    }
+
+    .lightbox-asset {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      user-select: none;
+      border-radius: var(--radius-sm);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+    }
+
+    video.lightbox-asset {
+      background: #000;
+    }
+
+    /* Audio Player Stage Card */
+    .lightbox-audio-hub {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 40px;
+      width: 100%;
+      max-width: 480px;
+      text-align: center;
+      box-shadow: var(--shadow-modal);
+    }
+
+    .audio-hub-icon {
+      width: 72px;
+      height: 72px;
+      margin: 0 auto 20px;
+      border-radius: var(--radius-md);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+    }
+
+    .audio-hub-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+      word-break: break-all;
+    }
+
+    .audio-hub-folder {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 24px;
+    }
+
+    audio.audio-hub-player {
+      width: 100%;
+      outline: none;
+    }
+
+    /* Floating Navigation Controls */
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 44px;
+      height: 44px;
+      border-radius: var(--radius-md);
+      background: rgba(18, 18, 22, 0.7);
+      border: 1px solid var(--border-subtle);
+      backdrop-filter: blur(8px);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      z-index: 25;
+    }
+
+    .nav-arrow:hover {
+      background: var(--bg-elevated);
+      border-color: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .nav-arrow svg {
+      width: 20px;
+      height: 20px;
+      stroke-width: 2;
+    }
+
+    .nav-arrow.prev { left: 18px; }
+    .nav-arrow.next { right: 18px; }
+
+    /* Bottom Keyboard Hints HUD */
+    .lightbox-hud-bottom {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 6px 14px;
+      background: rgba(18, 18, 22, 0.8);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-pill);
+      backdrop-filter: blur(12px);
+      z-index: 30;
+      pointer-events: none;
+    }
+
+    .hud-shortcut {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .hud-kbd {
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    /* Inspector / EXIF Sidebar Drawer */
+    .inspector-drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 340px;
+      background: var(--bg-surface);
+      border-left: 1px solid var(--border-subtle);
+      z-index: 40;
+      display: flex;
+      flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.6);
+    }
+
+    .inspector-drawer.active {
+      transform: translateX(0);
+    }
+
+    .inspector-header {
+      height: var(--topbar-height);
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .inspector-title {
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .inspector-body {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .inspector-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .inspector-section-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+    }
+
+    .inspector-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .inspector-label {
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+    }
+
+    .inspector-value {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      text-align: right;
+      word-break: break-all;
+    }
+
+    .inspector-value.mono {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+    }
+
+    .inspector-footer {
+      padding: 16px 20px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .btn-action-primary {
+      height: 38px;
+      background: var(--accent);
+      border: 1px solid transparent;
+      border-radius: var(--radius-md);
+      color: #fff;
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+    }
+
+    .btn-action-primary:hover {
+      background: var(--accent-hover);
+    }
+
+    /* ==========================================================================
+       Network / Tailscale Modal
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .modal-backdrop.active {
+      display: flex;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-modal);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .network-route-card {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .route-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .route-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .route-url {
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      color: var(--accent-text);
+      word-break: break-all;
+    }
+
+    .btn-copy-chip {
+      height: 28px;
+      padding: 0 10px;
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      font-size: 0.72rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+      transition: all 0.15s ease;
+    }
+
+    .btn-copy-chip:hover {
+      background: var(--border-strong);
+      color: var(--text-primary);
+    }
+
+    .callout-box {
+      background: rgba(59, 130, 246, 0.06);
+      border: 1px solid rgba(59, 130, 246, 0.18);
+      border-radius: var(--radius-md);
+      padding: 12px;
+      font-size: 0.78rem;
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+
+    .callout-box strong {
+      color: var(--text-primary);
+    }
+
+    /* Toast Notification (Minimalist HUD Pill) */
+    .toast-pill {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #18181d;
+      border: 1px solid var(--border-strong);
+      color: var(--text-primary);
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+      font-size: 0.8rem;
+      font-weight: 500;
+      box-shadow: var(--shadow-modal);
+      z-index: 200;
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease;
+    }
+
+    .toast-pill.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
+
+    /* Mobile Responsive Overrides */
+    @media (max-width: 640px) {
+      .app-header {
+        padding: 0 12px;
+      }
+      .toolbar-bar {
+        padding: 8px 12px;
+      }
+      .content-canvas {
+        padding: 12px 12px 40px;
+      }
+      .search-shortcut {
+        display: none;
+      }
+      .lightbox-hud-bottom {
+        display: none;
+      }
+      .inspector-drawer {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Utility Header -->
+    <header class="app-header">
+      <div class="brand-group">
+        <div class="brand-mark" aria-hidden="true">
+          <!-- Geometric Aperture Vector -->
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="12" cy="12" r="9"></circle>
+            <path d="M14.31 8l5.74 9.94M9.69 8h11.48M7.38 12l5.74-9.94M9.69 16L3.95 6.06M14.31 16H2.83M16.62 12l-5.74 9.94"></path>
+          </svg>
+        </div>
+        <div class="brand-info">
+          <div class="brand-title">
+            Prism <span class="brand-tag">Termux</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search Input with Keyboard Shortcut -->
+      <div class="search-container">
+        <div class="search-input-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input
+            type="text"
+            id="search-input"
+            class="search-input"
+            placeholder="Search filenames, extensions, or directories..."
+            autocomplete="off"
+            spellcheck="false"
+          >
+          <button id="search-clear" class="search-clear-btn" aria-label="Clear search">&times;</button>
+          <span class="search-shortcut">/</span>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="header-actions">
+        <button id="btn-tailscale-pill" class="tailscale-status-btn" title="View Mesh & LAN Connection URLs">
+          <span class="status-indicator"></span>
+          <span id="tailscale-label" class="status-ip">Connecting...</span>
+        </button>
+
+        <button id="btn-rescan" class="action-icon-btn" aria-label="Rescan Storage" title="Rescan /storage/emulated/0">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+          </svg>
+        </button>
+
+        <button id="btn-network-dialog" class="action-icon-btn" aria-label="Network Stream Information" title="Stream Information">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <rect x="2" y="2" width="20" height="8" rx="2"></rect>
+            <rect x="2" y="14" width="20" height="8" rx="2"></rect>
+            <line x1="6" y1="6" x2="6.01" y2="6"></line>
+            <line x1="6" y1="18" x2="6.01" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Toolbar: Filters & Density -->
+    <div class="toolbar-bar">
+      <!-- Media Type Segmented Control (Vector Icons Only - No Emojis) -->
+      <nav class="segmented-control" aria-label="Filter Media Type">
+        <button class="segmented-btn active" data-type="all">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          All <span class="counter-tag tnum" id="count-all">0</span>
+        </button>
+        <button class="segmented-btn" data-type="image">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+          Photos <span class="counter-tag tnum" id="count-img">0</span>
+        </button>
+        <button class="segmented-btn" data-type="video">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="2" y="2" width="20" height="20" rx="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+          Videos <span class="counter-tag tnum" id="count-vid">0</span>
+        </button>
+        <button class="segmented-btn" data-type="gif">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+          GIFs <span class="counter-tag tnum" id="count-gif">0</span>
+        </button>
+        <button class="segmented-btn" data-type="audio">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          Audio <span class="counter-tag tnum" id="count-aud">0</span>
+        </button>
+      </nav>
+
+      <!-- Secondary Controls: Folders, Sort, Density -->
+      <div class="toolbar-secondary">
+        <div class="select-wrap">
+          <select id="folder-select" class="custom-select" aria-label="Filter by Directory">
+            <option value="">All Directories</option>
+          </select>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+
+        <div class="select-wrap">
+          <select id="sort-select" class="custom-select" aria-label="Sort Media">
+            <option value="date_desc">Modified (Newest)</option>
+            <option value="date_asc">Modified (Oldest)</option>
+            <option value="size_desc">File Size (Largest)</option>
+            <option value="size_asc">File Size (Smallest)</option>
+            <option value="name_asc">Filename (A-Z)</option>
+          </select>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="6 9 12 15 18 9"></polyline></svg>
+        </div>
+
+        <!-- Density Selector -->
+        <div class="density-switcher" role="radiogroup" aria-label="Grid Density">
+          <button class="density-btn" data-density="compact" title="Compact Grid (Dense)" aria-label="Compact Grid">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="4" height="4"></rect><rect x="10" y="3" width="4" height="4"></rect><rect x="17" y="3" width="4" height="4"></rect><rect x="3" y="10" width="4" height="4"></rect><rect x="10" y="10" width="4" height="4"></rect><rect x="17" y="10" width="4" height="4"></rect><rect x="3" y="17" width="4" height="4"></rect><rect x="10" y="17" width="4" height="4"></rect><rect x="17" y="17" width="4" height="4"></rect></svg>
+          </button>
+          <button class="density-btn active" data-density="comfortable" title="Comfortable Grid" aria-label="Comfortable Grid">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+          </button>
+          <button class="density-btn" data-density="large" title="Large Grid (Detail)" aria-label="Large Grid">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="3" y="3" width="18" height="18" rx="2"></rect></svg>
+          </button>
+        </div>
+
+        <span id="stats-summary" class="stats-label tnum">Indexing...</span>
+      </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <main class="content-canvas">
+      <div id="media-grid" class="media-grid density-comfortable">
+        <!-- Injected via JavaScript -->
+      </div>
+
+      <div class="load-more-bar">
+        <button id="btn-load-more" class="btn-secondary" style="display: none;">
+          Load More Items
+        </button>
+      </div>
+
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <polyline points="21 15 16 10 5 21"></polyline>
+          </svg>
+        </div>
+        <h2 class="empty-title">No matching media found</h2>
+        <p class="empty-desc">Check your search query or folder filter, or trigger a background rescan.</p>
+        <button class="btn-secondary" onclick="resetFilters()">Reset All Filters</button>
+      </div>
+    </main>
+  </div>
+
+  <!-- Fullscreen Cinema Lightbox -->
+  <div id="lightbox" class="lightbox-overlay" role="dialog" aria-modal="true" aria-label="Media Preview">
+    <!-- Top HUD Bar -->
+    <div class="lightbox-hud-top">
+      <div class="hud-title-group">
+        <button id="btn-lightbox-close" class="action-icon-btn" aria-label="Close Lightbox (Esc)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+        <span id="hud-title" class="hud-filename">Loading...</span>
+        <span id="hud-counter" class="hud-counter tnum">0 / 0</span>
+      </div>
+
+      <div class="hud-actions">
+        <button id="btn-copy-stream-link" class="action-icon-btn" title="Copy Stream URL for VLC / Infuse / IINA" aria-label="Copy Stream URL">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+        </button>
+
+        <button id="btn-download-media" class="action-icon-btn" title="Download File" aria-label="Download File">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        </button>
+
+        <button id="btn-toggle-inspector" class="action-icon-btn" title="Inspect File Metadata (I)" aria-label="Inspect Metadata">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Media Stage Area -->
+    <div id="lightbox-stage" class="lightbox-stage">
+      <button id="nav-arrow-prev" class="nav-arrow prev" aria-label="Previous Media (Left Arrow)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="15 18 9 12 15 6"></polyline></svg>
+      </button>
+
+      <!-- Dynamically Injected Media Tag -->
+
+      <button id="nav-arrow-next" class="nav-arrow next" aria-label="Next Media (Right Arrow)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polyline points="9 18 15 12 9 6"></polyline></svg>
+      </button>
+    </div>
+
+    <!-- Bottom Keyboard Shortcut Indicator -->
+    <div class="lightbox-hud-bottom">
+      <div class="hud-shortcut"><span class="hud-kbd">←</span> <span class="hud-kbd">→</span> Navigate</div>
+      <div class="hud-shortcut"><span class="hud-kbd">Space</span> Play/Pause</div>
+      <div class="hud-shortcut"><span class="hud-kbd">I</span> Inspector</div>
+      <div class="hud-shortcut"><span class="hud-kbd">Esc</span> Exit</div>
+    </div>
+
+    <!-- Inspector / EXIF Drawer -->
+    <aside id="inspector-drawer" class="inspector-drawer" aria-label="Media File Inspector">
+      <div class="inspector-header">
+        <h3 class="inspector-title">Media Inspector</h3>
+        <button id="btn-close-inspector" class="action-icon-btn" style="width: 28px; height: 28px;" aria-label="Close Inspector">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+
+      <div class="inspector-body">
+        <div class="inspector-section">
+          <div class="inspector-section-label">File Attributes</div>
+          <div class="inspector-row">
+            <span class="inspector-label">Filename</span>
+            <span id="inspect-filename" class="inspector-value">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">Media Type</span>
+            <span id="inspect-type" class="inspector-value">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">Format</span>
+            <span id="inspect-ext" class="inspector-value mono">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">File Size</span>
+            <span id="inspect-size" class="inspector-value tnum">-</span>
+          </div>
+          <div class="inspector-row">
+            <span class="inspector-label">Last Modified</span>
+            <span id="inspect-date" class="inspector-value tnum">-</span>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-label">Storage Location</div>
+          <div class="inspector-row">
+            <span class="inspector-label">Album / Directory</span>
+            <span id="inspect-folder" class="inspector-value">-</span>
+          </div>
+          <div class="inspector-row" style="flex-direction: column; align-items: flex-start;">
+            <span class="inspector-label">Absolute Android Path</span>
+            <span id="inspect-path" class="inspector-value mono" style="text-align: left; margin-top: 4px; color: var(--text-secondary); font-size: 0.72rem;">-</span>
+          </div>
+        </div>
+
+        <div class="inspector-section">
+          <div class="inspector-section-label">Network Streaming</div>
+          <p style="font-size: 0.78rem; color: var(--text-muted); line-height: 1.4;">
+            This resource supports RFC 7233 byte-range seek and partial content delivery. Copy the direct stream URL to load it inside VLC, Infuse, or IINA.
+          </p>
+        </div>
+      </div>
+
+      <div class="inspector-footer">
+        <button id="btn-inspect-copy-stream" class="btn-action-primary">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 15px; height: 15px;"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          Copy Stream Link for VLC
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Network & Tailscale Connection Modal -->
+  <div id="network-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Network Stream Addresses">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 class="modal-title">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 18px; height: 18px; color: var(--status-active);"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+          Device Network Endpoints
+        </h2>
+        <button id="btn-close-network-modal" class="action-icon-btn" style="width: 28px; height: 28px;" aria-label="Close Modal">&times;</button>
+      </div>
+
+      <p style="font-size: 0.8rem; color: var(--text-secondary);">
+        Connect to this server from any device on your Tailscale mesh or local Wi-Fi router:
+      </p>
+
+      <div class="network-route-card">
+        <div class="route-info">
+          <span class="route-label">Tailscale Mesh URL</span>
+          <span id="route-tailscale" class="route-url">Detecting...</span>
+        </div>
+        <button class="btn-copy-chip" onclick="copyValue('route-tailscale')">Copy</button>
+      </div>
+
+      <div class="network-route-card">
+        <div class="route-info">
+          <span class="route-label">Local Wi-Fi Network</span>
+          <span id="route-lan" class="route-url">Detecting...</span>
+        </div>
+        <button class="btn-copy-chip" onclick="copyValue('route-lan')">Copy</button>
+      </div>
+
+      <div class="network-route-card">
+        <div class="route-info">
+          <span class="route-label">Localhost (Android Device)</span>
+          <span id="route-local" class="route-url">http://localhost:8080</span>
+        </div>
+        <button class="btn-copy-chip" onclick="copyValue('route-local')">Copy</button>
+      </div>
+
+      <div class="callout-box">
+        <strong>Direct Hardware-Accelerated Streaming:</strong> Paste any media stream link into <strong>VLC</strong> (<kbd>Ctrl+N</kbd> / <kbd>Cmd+N</kbd>), <strong>Infuse</strong> on Apple TV / iPad, or <strong>IINA</strong> for instant playback without browser transcoding.
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="toast-pill">Link copied to clipboard</div>
+
+  <!-- Application Logic -->
+  <script>
+    // Application State
+    const state = {
+      items: [],
+      page: 1,
+      limit: 60,
+      hasNext: false,
+      loading: false,
+      type: 'all',
+      folder: '',
+      search: '',
+      sort: 'date_desc',
+      currentIdx: -1,
+      network: null
+    };
+
+    // DOM References
+    const grid = document.getElementById('media-grid');
+    const loadMoreBtn = document.getElementById('btn-load-more');
+    const emptyState = document.getElementById('empty-state');
+    const searchInput = document.getElementById('search-input');
+    const searchClear = document.getElementById('search-clear');
+    const folderSelect = document.getElementById('folder-select');
+    const sortSelect = document.getElementById('sort-select');
+    const statsSummary = document.getElementById('stats-summary');
+    const toast = document.getElementById('toast');
+
+    // Lightbox References
+    const lightbox = document.getElementById('lightbox');
+    const hudTitle = document.getElementById('hud-title');
+    const hudCounter = document.getElementById('hud-counter');
+    const lightboxStage = document.getElementById('lightbox-stage');
+    const btnLightboxClose = document.getElementById('btn-lightbox-close');
+    const navPrev = document.getElementById('nav-arrow-prev');
+    const navNext = document.getElementById('nav-arrow-next');
+    const btnCopyStream = document.getElementById('btn-copy-stream-link');
+    const btnDownload = document.getElementById('btn-download-media');
+    const btnToggleInspector = document.getElementById('btn-toggle-inspector');
+    const inspectorDrawer = document.getElementById('inspector-drawer');
+    const btnCloseInspector = document.getElementById('btn-close-inspector');
+    const btnInspectCopyStream = document.getElementById('btn-inspect-copy-stream');
+
+    // Network Modal References
+    const networkModal = document.getElementById('network-modal');
+    const btnTailscalePill = document.getElementById('btn-tailscale-pill');
+    const btnNetworkDialog = document.getElementById('btn-network-dialog');
+    const btnCloseNetworkModal = document.getElementById('btn-close-network-modal');
+    const tailscaleLabel = document.getElementById('tailscale-label');
+    const routeTailscale = document.getElementById('route-tailscale');
+    const routeLan = document.getElementById('route-lan');
+    const routeLocal = document.getElementById('route-local');
+    const btnRescan = document.getElementById('btn-rescan');
+
+    // Startup Initialization
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchNetworkEndpoints();
+      fetchCatalogStats();
+      fetchDirectories();
+      loadMediaCatalog(true);
+      bindGlobalEvents();
+    });
+
+    function showToast(text) {
+      toast.textContent = text;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2400);
+    }
+
+    function copyValue(elementId) {
+      const val = document.getElementById(elementId).textContent;
+      navigator.clipboard.writeText(val).then(() => {
+        showToast(`Copied: ${val}`);
+      });
+    }
+
+    function resetFilters() {
+      state.search = '';
+      searchInput.value = '';
+      searchClear.style.display = 'none';
+      state.folder = '';
+      folderSelect.value = '';
+      state.type = 'all';
+      document.querySelectorAll('.segmented-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.type === 'all');
+      });
+      loadMediaCatalog(true);
+    }
+
+    // Network Endpoints API
+    async function fetchNetworkEndpoints() {
+      try {
+        const res = await fetch('/api/network');
+        const data = await res.json();
+        state.network = data;
+        const port = data.port || 8080;
+
+        if (data.tailscale) {
+          tailscaleLabel.textContent = `Tailscale: ${data.tailscale}`;
+          routeTailscale.textContent = `http://${data.tailscale}:${port}`;
+        } else {
+          tailscaleLabel.textContent = `LAN: ${data.lan}`;
+          routeTailscale.textContent = 'Not active on device';
+        }
+        routeLan.textContent = `http://${data.lan}:${port}`;
+        routeLocal.textContent = `http://localhost:${port}`;
+      } catch (err) {
+        tailscaleLabel.textContent = 'Offline';
+      }
+    }
+
+    // Catalog Statistics API
+    async function fetchCatalogStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        document.getElementById('count-all').textContent = data.total_items || 0;
+        document.getElementById('count-img').textContent = data.image_count || 0;
+        document.getElementById('count-vid').textContent = data.video_count || 0;
+        document.getElementById('count-gif').textContent = data.gif_count || 0;
+        document.getElementById('count-aud').textContent = data.audio_count || 0;
+        statsSummary.textContent = `${(data.total_items || 0).toLocaleString()} items • ${data.total_size_fmt || '0 B'}`;
+      } catch (e) {}
+    }
+
+    // Directory Album API
+    async function fetchDirectories() {
+      try {
+        const res = await fetch('/api/folders');
+        const data = await res.json();
+        folderSelect.innerHTML = '<option value="">All Directories</option>';
+        (data.folders || []).forEach(f => {
+          const opt = document.createElement('option');
+          opt.value = f.name;
+          opt.textContent = `${f.name} (${f.count})`;
+          folderSelect.appendChild(opt);
+        });
+      } catch (e) {}
+    }
+
+    // Media Catalog Loading & Rendering
+    async function loadMediaCatalog(reset = false) {
+      if (state.loading) return;
+      state.loading = true;
+
+      if (reset) {
+        state.page = 1;
+        state.items = [];
+        grid.innerHTML = '';
+        renderSkeletonGrid(18);
+      }
+
+      const params = new URLSearchParams({
+        type: state.type,
+        folder: state.folder,
+        search: state.search,
+        sort: state.sort,
+        page: state.page,
+        limit: state.limit
+      });
+
+      try {
+        const res = await fetch(`/api/media?${params}`);
+        const data = await res.json();
+
+        if (state.page === 1) {
+          grid.innerHTML = '';
+        }
+
+        const newItems = data.items || [];
+        state.items.push(...newItems);
+        state.hasNext = data.has_next;
+
+        if (state.items.length === 0) {
+          emptyState.style.display = 'block';
+        } else {
+          emptyState.style.display = 'none';
+          appendCards(newItems);
+        }
+
+        loadMoreBtn.style.display = state.hasNext ? 'inline-flex' : 'none';
+      } catch (err) {
+        console.error("Failed loading media:", err);
+      } finally {
+        state.loading = false;
+      }
+    }
+
+    function renderSkeletonGrid(count) {
+      for (let i = 0; i < count; i++) {
+        const skel = document.createElement('div');
+        skel.className = 'media-card skeleton-card';
+        grid.appendChild(skel);
+      }
+    }
+
+    function appendCards(items) {
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'media-card';
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
+        card.setAttribute('aria-label', `${item.name}, ${item.type}`);
+        card.onclick = () => openLightbox(item.id);
+        card.onkeydown = (e) => { if (e.key === 'Enter') openLightbox(item.id); };
+
+        let badgeTop = '';
+        let playOverlay = '';
+
+        if (item.type === 'video') {
+          badgeTop = `
+            <div class="card-badge-top">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+              <span>Video</span>
+            </div>
+          `;
+          playOverlay = `
+            <div class="play-emblem" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg>
+            </div>
+          `;
+        } else if (item.type === 'gif') {
+          badgeTop = `
+            <div class="card-badge-top">
+              <span>GIF</span>
+            </div>
+          `;
+        } else if (item.type === 'audio') {
+          badgeTop = `
+            <div class="card-badge-top">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+              <span>Audio</span>
+            </div>
+          `;
+        }
+
+        let mediaContent = '';
+        if (item.type === 'audio') {
+          mediaContent = `
+            <div class="audio-card-inner">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+              <div class="audio-card-name">${escapeHtml(item.name)}</div>
+            </div>
+          `;
+        } else {
+          mediaContent = `
+            <img
+              src="/thumb/${item.id}"
+              alt="${escapeHtml(item.name)}"
+              loading="lazy"
+              onerror="this.onerror=null; this.src='/stream/${item.id}';"
+            >
+          `;
+        }
+
+        card.innerHTML = `
+          ${badgeTop}
+          ${playOverlay}
+          ${mediaContent}
+          <div class="card-badge-bottom tnum">${item.size_fmt}</div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str) {
+      return (str || '').replace(/[&<>"']/g, m => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    // Lightbox & Inspector Management
+    function openLightbox(itemId) {
+      const idx = state.items.findIndex(x => x.id === itemId);
+      if (idx === -1) return;
+      state.currentIdx = idx;
+      renderActiveMedia();
+      lightbox.classList.add('active');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeLightbox() {
+      const vid = lightboxStage.querySelector('video');
+      if (vid) vid.pause();
+      const aud = lightboxStage.querySelector('audio');
+      if (aud) aud.pause();
+
+      lightbox.classList.remove('active');
+      inspectorDrawer.classList.remove('active');
+      document.body.style.overflow = '';
+      state.currentIdx = -1;
+    }
+
+    function renderActiveMedia() {
+      const item = state.items[state.currentIdx];
+      if (!item) return;
+
+      hudTitle.textContent = item.name;
+      hudCounter.textContent = `${state.currentIdx + 1} of ${state.items.length}`;
+
+      // Navigation arrows visibility
+      navPrev.style.display = state.currentIdx > 0 ? 'flex' : 'none';
+      navNext.style.display = (state.currentIdx < state.items.length - 1 || state.hasNext) ? 'flex' : 'none';
+
+      // Clear existing media
+      const oldAssets = lightboxStage.querySelectorAll('.lightbox-asset, .lightbox-audio-hub');
+      oldAssets.forEach(el => el.remove());
+
+      const streamUrl = `/stream/${item.id}`;
+
+      if (item.type === 'video') {
+        const vid = document.createElement('video');
+        vid.className = 'lightbox-asset';
+        vid.src = streamUrl;
+        vid.controls = true;
+        vid.autoplay = true;
+        vid.playsInline = true;
+        lightboxStage.appendChild(vid);
+      } else if (item.type === 'audio') {
+        const hub = document.createElement('div');
+        hub.className = 'lightbox-audio-hub';
+        hub.innerHTML = `
+          <div class="audio-hub-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" style="width: 36px; height: 36px;"><path d="M9 18V5l12-2v13"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+          </div>
+          <h3 class="audio-hub-title">${escapeHtml(item.name)}</h3>
+          <div class="audio-hub-folder">${escapeHtml(item.folder)}</div>
+          <audio class="audio-hub-player" src="${streamUrl}" controls autoplay></audio>
+        `;
+        lightboxStage.appendChild(hub);
+      } else {
+        const img = document.createElement('img');
+        img.className = 'lightbox-asset';
+        img.src = streamUrl;
+        img.alt = item.name;
+        lightboxStage.appendChild(img);
+      }
+
+      // Populate Inspector Drawer
+      document.getElementById('inspect-filename').textContent = item.name;
+      document.getElementById('inspect-type').textContent = item.type.toUpperCase();
+      document.getElementById('inspect-ext').textContent = item.ext;
+      document.getElementById('inspect-size').textContent = `${item.size_fmt} (${item.size.toLocaleString()} bytes)`;
+      document.getElementById('inspect-date').textContent = item.date_fmt;
+      document.getElementById('inspect-folder').textContent = item.folder;
+      document.getElementById('inspect-path').textContent = item.full_path;
+
+      // Update Actions
+      const fullUrl = window.location.origin + streamUrl;
+      const copyAction = () => {
+        navigator.clipboard.writeText(fullUrl).then(() => {
+          showToast('Direct stream link copied for VLC / Infuse');
+        });
+      };
+      btnCopyStream.onclick = copyAction;
+      btnInspectCopyStream.onclick = copyAction;
+      btnDownload.onclick = () => {
+        window.open(`/stream/${item.id}?download=1`, '_blank');
+      };
+    }
+
+    function navigatePrevious() {
+      if (state.currentIdx > 0) {
+        state.currentIdx--;
+        renderActiveMedia();
+      }
+    }
+
+    function navigateNext() {
+      if (state.currentIdx < state.items.length - 1) {
+        state.currentIdx++;
+        renderActiveMedia();
+      } else if (state.hasNext) {
+        state.page++;
+        loadMediaCatalog(false).then(() => {
+          if (state.currentIdx < state.items.length - 1) {
+            state.currentIdx++;
+            renderActiveMedia();
+          }
+        });
+      }
+    }
+
+    // Global Event Handlers
+    function bindGlobalEvents() {
+      // Type Filter Segmented Control
+      document.querySelectorAll('.segmented-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.segmented-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          state.type = btn.dataset.type;
+          loadMediaCatalog(true);
+        });
+      });
+
+      // Directory Selector
+      folderSelect.addEventListener('change', (e) => {
+        state.folder = e.target.value;
+        loadMediaCatalog(true);
+      });
+
+      // Sort Selector
+      sortSelect.addEventListener('change', (e) => {
+        state.sort = e.target.value;
+        loadMediaCatalog(true);
+      });
+
+      // Grid Density Switcher
+      document.querySelectorAll('.density-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.density-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          grid.className = `media-grid density-${btn.dataset.density}`;
+        });
+      });
+
+      // Search Handling
+      let searchTimer = null;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimer);
+        const query = e.target.value.trim();
+        searchClear.style.display = query ? 'block' : 'none';
+        searchTimer = setTimeout(() => {
+          state.search = query;
+          loadMediaCatalog(true);
+        }, 280);
+      });
+
+      searchClear.addEventListener('click', () => {
+        searchInput.value = '';
+        searchClear.style.display = 'none';
+        state.search = '';
+        loadMediaCatalog(true);
+      });
+
+      // Keyboard Shortcut '/' to focus search
+      window.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement !== searchInput && !lightbox.classList.contains('active')) {
+          e.preventDefault();
+          searchInput.focus();
+        }
+      });
+
+      // Lightbox Controls
+      btnLightboxClose.addEventListener('click', closeLightbox);
+      navPrev.addEventListener('click', navigatePrevious);
+      navNext.addEventListener('click', navigateNext);
+      btnToggleInspector.addEventListener('click', () => {
+        inspectorDrawer.classList.toggle('active');
+      });
+      btnCloseInspector.addEventListener('click', () => {
+        inspectorDrawer.classList.remove('active');
+      });
+
+      // Keyboard Navigation in Lightbox
+      window.addEventListener('keydown', (e) => {
+        if (!lightbox.classList.contains('active')) return;
+
+        if (e.key === 'Escape') {
+          closeLightbox();
+        } else if (e.key === 'ArrowLeft') {
+          navigatePrevious();
+        } else if (e.key === 'ArrowRight') {
+          navigateNext();
+        } else if (e.key.toLowerCase() === 'i') {
+          inspectorDrawer.classList.toggle('active');
+        } else if (e.key === ' ') {
+          const vid = lightboxStage.querySelector('video');
+          if (vid) {
+            e.preventDefault();
+            vid.paused ? vid.play() : vid.pause();
+          }
+        }
+      });
+
+      // Infinite Scroll Trigger
+      window.addEventListener('scroll', () => {
+        if (state.loading || !state.hasNext) return;
+        if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+          state.page++;
+          loadMediaCatalog(false);
+        }
+      });
+
+      loadMoreBtn.addEventListener('click', () => {
+        state.page++;
+        loadMediaCatalog(false);
+      });
+
+      // Network Modal
+      btnTailscalePill.addEventListener('click', () => networkModal.classList.add('active'));
+      btnNetworkDialog.addEventListener('click', () => networkModal.classList.add('active'));
+      btnCloseNetworkModal.addEventListener('click', () => networkModal.classList.remove('active'));
+      networkModal.addEventListener('click', (e) => {
+        if (e.target === networkModal) networkModal.classList.remove('active');
+      });
+
+      // Storage Rescan
+      btnRescan.addEventListener('click', async () => {
+        showToast('Scanning storage in background...');
+        try {
+          await fetch('/api/rescan', { method: 'POST' });
+          setTimeout(() => {
+            fetchCatalogStats();
+            fetchDirectories();
+            loadMediaCatalog(true);
+            showToast('Catalog updated');
+          }, 2000);
+        } catch (e) {}
+      });
+    }
+  </script>
+</body>
+</html>
